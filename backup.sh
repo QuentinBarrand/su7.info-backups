@@ -32,6 +32,8 @@ FTPPort="";
 FTPUser="";
 FTPPassword="";
 
+# Archive password
+backupPassword="";
 
 if [ $# -ne 1 ]; then
         echo "Usage: $0 /path/to/backup/directory (without trailing slash)";
@@ -122,7 +124,7 @@ echo "done.";
 echo "[Archive creation]";
 
 echo -n "	Creating the archive... ";
-zip -y -r $backupDirectory"/"$currentDate".zip" $dateDirectory > $backupDirectory"/"$currentDate".log";
+zip -y -P $backupPassword -r $backupDirectory"/"$currentDate".zip" $dateDirectory > $backupDirectory"/"$currentDate".log";
 echo "done.";
 
 echo -n "	Deleting the temporary directory in $tempDir... ";
