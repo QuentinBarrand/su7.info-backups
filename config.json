@@ -1,0 +1,32 @@
+{
+	"admin": "",
+	"temp_dir": "/tmp",
+	"backup_dir" : "",
+	"mysql": {
+		"host": "",
+		"port": "3306",
+		"user": "",
+		"password": ""
+	},
+
+	"apache": {
+		"sites": "/var/www/",
+		"conf": "/etc/apache2/"
+	},
+	"users_home": [
+		""
+	],
+	"git": "/home/git/",
+	"ftp": [
+		{
+			"host": "",
+			"port": 21,
+			"user": "",
+			"password": "",
+			"path_to_backup_dir": ""
+		}
+	],
+	"keeptime": 7,
+	"backup_password": "",
+	"archive_prefix": ""
+}
