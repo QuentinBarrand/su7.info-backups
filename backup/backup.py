@@ -74,36 +74,24 @@ def save_apache2():
 	global config
 
 	os.mkdir(config['date_directory'] + 'apache2/')
-	
-	print "debug : " + config['date_directory'] + 'apache2/sites'
 
 	print "\tWebsites...",
-	try:
-		copytree(config['apache']['sites'], config['date_directory'] + 'apache2/sites', symlinks=True, ignore=None)
-	except OSError:
-		print "Encoding issues with filenames; using UNIX's cp instead..."
-		subprocess.call(['cp', '-r', config['apache']['sites'], config['date_directory']])
+	save_dir(config['apache']['sites'], config['date_directory'] + 'apache2/sites')
 	print "done."
 
 	print "\tConfig...",
-	copytree(config['apache']['conf'], config['date_directory'] + 'apache2/config', symlinks=True, ignore=None)
+	save_dir(config['apache']['conf'], config['date_directory'] + 'apache2/config')
 	print "done."
 
 
-def save_homedirs():
+def save_dir(source, dest):
 	global config
 
-	os.mkdir(config['date_directory'] + 'homedirs/')
-
-	for home in config['users_home']:
-		print "\t" + home + "...",
-
-		try:
-			copytree(home, config['date_directory'] + 'homedirs/' + home, symlinks=True, ignore=None)
-		except OSError:
-			print home + " could not be found; passed..."
-			pass
-		print "done."
+	try:
+		copytree(source, dest, symlinks=True, ignore=None)
+	except UnicodeDecodeError:
+		print "Found non-unicode filenames; using UNIX's cp instead..."
+		subprocess.call(['cp', '-r', source, dest])
 
 
 def zip_directory():
@@ -129,7 +117,6 @@ def upload_remote():
 	for server in config['ftp']:
 		print "\tUploading to " + server['host'] + "...",
 
-		#try:
 		connection = FTP()
 		connection.connect(server['host'], server['port'])
 		connection.login(server['user'], server['password'])
@@ -139,8 +126,6 @@ def upload_remote():
 
 		connection.quit()
 		print "done."
-		#except Exception as e:
-			#print "Something went wrong during the upload. Here's the error message :\n" + e.message
 
 
 def delete_remote(zip_archive):
@@ -252,7 +237,7 @@ def main():
 
 	os.mkdir(date_directory)
 
-	# Save db
+	# Save databases
 	print "\n[MySQL]"
 	os.mkdir(date_directory + 'db/')
 
@@ -269,15 +254,18 @@ def main():
 	print "\n[Git]"
 
 	print "\tRepositories...",
-	#try:
-	copytree(config['git'], date_directory + "git", symlinks=True, ignore=None)
-	#except OSError:
-
+	save_dir(config['git'], date_directory + "git")
 	print "done."
 
 	# Save the users' home directories
 	print "\n[Users home directories]"
-	save_homedirs()
+
+	os.mkdir(config['date_directory'] + 'homedirs/')
+
+	for home in config['users_home']:
+		print "\t" + home + "...",
+		save_dir(home, config['date_directory'] + 'homedirs/' + home)
+		print "done."
 
 	# ZIP
 	print "\n[Archives]"
@@ -287,6 +275,7 @@ def main():
 	print "\tCreating backup archive (" + config['zip_archive'] + ")...", 
 	zip_directory()
 	print "done. "
+	print "\tArchive path : " + config['zip_archive']
 	print "\tArchive size : " + str(os.path.getsize(config['zip_archive']) / 1000000) + " MB."
 
 	# Upload the archive to ftp repos
