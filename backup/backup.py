@@ -9,16 +9,16 @@ import subprocess
 import string
 import pwd
 import grp
+import zipfile
 
 from shutil import copytree, rmtree
 from json import loads
 from datetime import date, datetime
 from ftplib import FTP
-from zipfile import ZipFile
 
 
 def usage():
-	print "Usage : python backup.py -c <path_to_config.json> [-s]"
+	print "Usage : python backup.py -c <path_to_config.json> [-s] [-d]"
 	sys.exit(2)
 
 
@@ -38,8 +38,6 @@ def get_db_list():
 	db_list, stderr = process.communicate()
 	
 	db_list = string.split(str(db_list))
-
-	db_list.pop()
 
 	# These databases can cause issues during backup
 	db_list.remove('performance_schema')
@@ -90,25 +88,37 @@ def save_dir(source, dest):
 	try:
 		copytree(source, dest, symlinks=True, ignore=None)
 	except UnicodeDecodeError:
-		print "Found non-unicode filenames; using UNIX's cp instead..."
+		print non_unicode_filename("cp"),
+
+		# We first delete what has already been copied
+		subprocess.call(['rm', '-rf', dest])
 		subprocess.call(['cp', '-r', source, dest])
 
 
-def zip_directory():
+def zip_directory(source, dest):
 	global config
 
-	zip_file = ZipFile(config['zip_archive'], 'w')
-	zip_file.setpassword(config['backup_password'])
-	
-	for root, dirs, files in os.walk(config['date_directory']):
-		for file in files:
-			# An OSError exception can be thrown due to ZipFile following symlinks :-(
-			try:
-				zip_file.write(os.path.join(root, file))
-			except OSError:
-				pass
+	os.chdir(source)
 
-	zip_file.close()
+	# Use Python's ZipFile module if possible
+	try :
+		zip_file = zipfile.ZipFile(file=dest, mode='w', compression=zipfile.ZIP_DEFLATED)
+		zip_file.setpassword(config['archive']['password'])
+
+		for root, dirs, files in os.walk('.'):
+			for file in files:
+				# An OSError exception can be thrown due to ZipFile following symlinks :-(
+				try:
+					zip_file.write(os.path.join(root, file))
+				except OSError:
+					pass
+
+		zip_file.close()
+	# If not, go back to the good old UNIX's zip
+	except UnicodeDecodeError:
+		non_unicode_filename("zip")
+		subprocess.call(['rm', dest])
+		subprocess.call(['zip', '-y', '-P', config['archive']['password'], '-r', dest, '.', '>', '/dev/null'])
 
 
 def upload_remote():
@@ -143,7 +153,7 @@ def delete_remote(zip_archive):
 
 			connection.quit()
 			print "done."
-		except error as e:
+		except Exception as e:
 			print "Something went wrong during the removal. Here's the error message :\n" + e.message
 
 
@@ -151,7 +161,11 @@ def maintenance():
 	global config
 
 	print "\tDeleting temporary folder...",
-	rmtree(config['date_directory'])
+	try:
+		rmtree(config['date_directory'])
+	except UnicodeDecodeError:
+		non_unicode_filename("rm")
+		subprocess.call(['rm', '-rf', config['date_directory']])
 	print "done."
 
 	# Removing old archives
@@ -180,15 +194,19 @@ def maintenance():
 	# Give permissions to the directory containing the zip archives to the admin only
 	print "\tGiving permissions to " + config['admin'] + "...",
 	os.chown(config['backup_dir'], pwd.getpwnam(config['admin']).pw_uid, grp.getgrnam(config['admin']).gr_gid)
-	os.chmod(config['backup_dir'], 700)
+	os.chmod(config['backup_dir'], 0700)
 	print "done."
+
+
+def non_unicode_filename(command):
+	print "[Found non-unicode filenames; using UNIX's " + command + " instead]",
 
 
 def main():
 	global config
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hc:s", ["help", "config_path=", "cronjob"])
+		opts, args = getopt.getopt(sys.argv[1:], "hc:sd", ["help", "config_path=", "cronjob", "debug"])
 	except getopt.GetoptError as err:
 		print str(err) 
 		usage()
@@ -199,6 +217,9 @@ def main():
 	# Silent = nothing to the standard output
 	silent = False
 
+	# Debug : no upload nor maintenance
+	debug = False
+
 	# Arguments handling
 	for o, a in opts:
 		if o in ("-c", "--config_path"):
@@ -207,6 +228,8 @@ def main():
 			usage()
 		elif o in ("-s", "--silent"):
 			silent = True
+		elif o in ("-d", "--debug"):
+			debug = True
 		else:
 			assert False, "unhandled option"
 
@@ -230,12 +253,14 @@ def main():
 				  "and could not be created. Exiting.\n"
 			sys.exit(1)
 
+
 	# Create backup directory
 	date_directory = config['temp_dir'] + '/backup_' + str(date.today()) + '/'
 
 	config['date_directory'] = date_directory
 
 	os.mkdir(date_directory)
+
 
 	# Save databases
 	print "\n[MySQL]"
@@ -246,9 +271,11 @@ def main():
 
 	save_db()
 
+
 	# Save apache2 sites and config
 	print "\n[Apache 2]"
 	save_apache2()
+
 
 	# Save Git repos
 	print "\n[Git]"
@@ -256,6 +283,7 @@ def main():
 	print "\tRepositories...",
 	save_dir(config['git'], date_directory + "git")
 	print "done."
+
 
 	# Save the users' home directories
 	print "\n[Users home directories]"
@@ -267,24 +295,31 @@ def main():
 		save_dir(home, config['date_directory'] + 'homedirs/' + home)
 		print "done."
 
-	# ZIP
-	print "\n[Archives]"
-	os.chdir(config['backup_dir'])
-	config['zip_archive'] = config['archive_prefix'] + str(date.today()) + ".zip"
 
-	print "\tCreating backup archive (" + config['zip_archive'] + ")...", 
-	zip_directory()
+	# ZIP
+	config['zip_archive'] = config['archive']['prefix'] + str(date.today()) + ".zip"
+
+	print "\n[Archives]"
+	print "\tCreating backup archive...", 
+	zip_directory(config['date_directory'], config['backup_dir'] + config['zip_archive'])
 	print "done. "
-	print "\tArchive path : " + config['zip_archive']
-	print "\tArchive size : " + str(os.path.getsize(config['zip_archive']) / 1000000) + " MB."
+
+	os.chdir(config['backup_dir'])
+	 
+	print "\tArchive : " + config['zip_archive'] + ", size " + str(os.path.getsize(config['zip_archive']) / 1000000) + " MB."
+
 
 	# Upload the archive to ftp repos
-	print "\n[Upload to remote servers]"
-	upload_remote()
+	if not debug:
+		print "\n[Upload to remote servers]"
+		upload_remote()
+
 
 	# Run maintenance
-	print "\n[Maintenance]"
-	maintenance()
+	if not debug:
+		print "\n[Maintenance]"
+		maintenance()
+
 
 	end_time = int(time.mktime(time.gmtime()))
 
@@ -297,3 +332,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+
