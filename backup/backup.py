@@ -38,12 +38,12 @@ def get_db_list():
 	db_list, stderr = process.communicate()
 	
 	db_list = string.split(str(db_list))
+
 	db_list.pop()
 
 	# These databases can cause issues during backup
 	db_list.remove('performance_schema')
 	db_list.remove('mysql')
-
 
 	return db_list
 
@@ -78,7 +78,11 @@ def save_apache2():
 	print "debug : " + config['date_directory'] + 'apache2/sites'
 
 	print "\tWebsites...",
-	copytree(config['apache']['sites'], config['date_directory'] + 'apache2/sites', symlinks=True, ignore=None)
+	try:
+		copytree(config['apache']['sites'], config['date_directory'] + 'apache2/sites', symlinks=True, ignore=None)
+	except OSError:
+		print "Encoding issues with filenames; using UNIX's cp instead..."
+		subprocess.call(['cp', '-r', config['apache']['sites'], config['date_directory']])
 	print "done."
 
 	print "\tConfig...",
@@ -96,9 +100,10 @@ def save_homedirs():
 
 		try:
 			copytree(home, config['date_directory'] + 'homedirs/' + home, symlinks=True, ignore=None)
-			print "done."
 		except OSError:
-			print "There is a problem with " + home + ". It could not be backuped."
+			print home + " could not be found; passed..."
+			pass
+		print "done."
 
 
 def zip_directory():
@@ -124,18 +129,18 @@ def upload_remote():
 	for server in config['ftp']:
 		print "\tUploading to " + server['host'] + "...",
 
-		try:
-			connection = FTP()
-			connection.connect(server['host'], server['port'])
-			connection.login(server['user'], server['password'])
-			connection.cwd(server['path_to_backup_dir'])
+		#try:
+		connection = FTP()
+		connection.connect(server['host'], server['port'])
+		connection.login(server['user'], server['password'])
+		connection.cwd(server['path_to_backup_dir'])
 
-			connection.storbinary("STOR " + config['zip_archive'], open(config['zip_archive'], 'rb'))
+		connection.storbinary("STOR " + config['zip_archive'], open(config['zip_archive'], 'rb'))
 
-			connection.quit()
-			print "done."
-		except error as e:
-			print "Something went wrong during the upload. Here's the error message :\n" + e.message
+		connection.quit()
+		print "done."
+		#except Exception as e:
+			#print "Something went wrong during the upload. Here's the error message :\n" + e.message
 
 
 def delete_remote(zip_archive):
@@ -231,6 +236,15 @@ def main():
 	# A double trailing slash does not matter so let's be sure there's at least one
 	config['backup_dir'] += '/'
 
+	# Test if backup directory exists; if not, create it
+	if not os.path.isdir(config['backup_dir']):
+		try:
+			os.mkdir(config['backup_dir'])
+		except:
+			print "The backup directory " + config['backup_dir'] + " does not exist " + \
+				  "and could not be created. Exiting.\n"
+			sys.exit(1)
+
 	# Create backup directory
 	date_directory = config['temp_dir'] + '/backup_' + str(date.today()) + '/'
 
@@ -255,24 +269,25 @@ def main():
 	print "\n[Git]"
 
 	print "\tRepositories...",
+	#try:
 	copytree(config['git'], date_directory + "git", symlinks=True, ignore=None)
+	#except OSError:
+
 	print "done."
 
 	# Save the users' home directories
 	print "\n[Users home directories]"
-	
 	save_homedirs()
 
 	# ZIP
 	print "\n[Archives]"
-
 	os.chdir(config['backup_dir'])
-
 	config['zip_archive'] = config['archive_prefix'] + str(date.today()) + ".zip"
 
 	print "\tCreating backup archive (" + config['zip_archive'] + ")...", 
 	zip_directory()
-	print "done."
+	print "done. "
+	print "\tArchive size : " + str(os.path.getsize(config['zip_archive']) / 1000000) + " MB."
 
 	# Upload the archive to ftp repos
 	print "\n[Upload to remote servers]"
