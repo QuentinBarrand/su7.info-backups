@@ -3,9 +3,9 @@
 	"temp_dir": "/tmp",
 	"backup_dir" : "",
 	"mysql": {
-		"host": "",
+		"host": "localhost",
 		"port": "3306",
-		"user": "",
+		"user": "root",
 		"password": ""
 	},
 
@@ -13,10 +13,13 @@
 		"sites": "/var/www/",
 		"conf": "/etc/apache2/"
 	},
+
 	"users_home": [
 		""
 	],
-	"git": "/home/git/",
+
+	"git": "",
+
 	"ftp": [
 		{
 			"host": "",
@@ -26,7 +29,12 @@
 			"path_to_backup_dir": ""
 		}
 	],
+
 	"keeptime": 7,
-	"backup_password": "",
-	"archive_prefix": ""
+
+	"archive": {
+		"password" : "",
+		"prefix": ""
+	}
 }
+
