@@ -178,7 +178,7 @@ def maintenance():
         archive_info = os.stat(config['backup_dir'] + '/' + archive)
         
         # If archive is older than keeptime (in days)...
-        if now - archive_info.st_mtime > now - (config['keeptime'] * 24 * 60 * 60):
+        if now - archive_info.st_mtime > (config['keeptime'] * 24 * 60 * 60):
             print "\tDeleting " + archive + "...",
             
             print "\t\tLocal...",
