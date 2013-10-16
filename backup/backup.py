@@ -142,7 +142,7 @@ def delete_remote(zip_archive):
     global config
 
     for server in config['ftp']:
-        print "\t\tDeleting on " + server['host'] + "...",
+        print "\t\tOn remote " + server['host'] + "...",
 
         try:
             connection = FTP()
@@ -179,7 +179,7 @@ def maintenance():
         
         # If archive is older than keeptime (in days)...
         if now - archive_info.st_mtime > (config['keeptime'] * 24 * 60 * 60):
-            print "\tDeleting " + archive + "...",
+            print "\tDeleting " + archive + "..."
             
             print "\t\tLocal...",
             os.remove(archive)
