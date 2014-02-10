@@ -28,9 +28,11 @@ def get_db_list(instance):
 
 
 def save_dbs(instance, db_list, instance_dir):
+    if instance['port'] is '':
+        instance['port'] = 3306
 
     for db in db_list:
-        print '\t\t' + db + '...'
+        print '\t\t' + db
 
         query = string.join([
             'mysqldump',
@@ -44,5 +46,3 @@ def save_dbs(instance, db_list, instance_dir):
             '--result-file=' + instance_dir + db + '.sql'])
         
         subprocess.call(query, shell=True)
-
-        print 'done.'

@@ -3,11 +3,12 @@ import os
 import shutil
 import sys
 import tarfile
+import time
 
 from tempfile import mkdtemp
 
-import mysql
 import ftp
+import mysql
 
 try:
     from config import *
@@ -15,14 +16,17 @@ except:
     print 'Could not import settings ! Please check config.py.'
     sys.exit(2)
 
+print 'Backup starting on ' + str(datetime.datetime.now())
+
+# Start the counter
+start = int(time.time())
+
 # Create temporary directory
 temp_dir = mkdtemp()
 
-print temp_dir
-
 # MySQL
 
-print '[MySQL]'
+print '\n[MySQL]'
 
 i = 0
 
@@ -41,7 +45,7 @@ for instance in MYSQL:
 
 # ... the rest
 
-print '[Archiving]'
+print '\n[Archiving]'
 
 # Create OUTPUT_DIR if it does not exist
 if not os.path.isdir(OUTPUT_DIR):
@@ -71,7 +75,40 @@ tar.close()
 
 shutil.rmtree(temp_dir)
 
-print '[Upload]'
+print '\n\tArchive : ' + os.path.basename(tar_file) + ', size ' + str(os.path.getsize(tar_file) / 1000000) + ' MB.'
+
+print '\n[Upload]'
 
 for instance in FTP:
     ftp.upload(instance, tar_file)
+
+print '\n[Delete old backups]'
+
+archives_deleted = False
+
+for archive in os.listdir(OUTPUT_DIR):
+    archive_info = os.stat(OUTPUT_DIR + '/' + archive)
+    
+    # If archive is older than keeptime (in days)...
+    if time.mktime(time.gmtime()) - archive_info.st_mtime > (KEEPTIME * 24 * 60 * 60):
+        print '\tDeleting ' + archive
+        
+        print '\t\tLocal...'
+        os.remove(archive)
+
+        for instance in FTP:
+            ftp.delete_remote(instance, archive)
+        
+        archives_deleted = True
+
+if not archives_deleted:
+    print '\tNo archives were deleted.'
+
+# Stop the counter
+end = int(time.time())
+
+print '\nBackup ending on ' + str(datetime.datetime.now())
+
+minutes = (end - start) / 60
+seconds = (end - start) - minutes * 60
+print 'Time elapsed : ' + str(minutes) + ' min ' + str(seconds) + ' s.'
