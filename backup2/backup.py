@@ -94,7 +94,7 @@ for archive in os.listdir(OUTPUT_DIR):
         print '\tDeleting ' + archive
         
         print '\t\tLocal...'
-        os.remove(archive)
+        os.remove(OUTPUT_DIR + '/' + archive)
 
         for instance in FTP:
             ftp.delete_remote(instance, archive)
