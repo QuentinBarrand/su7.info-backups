@@ -1,7 +1,7 @@
-DEBUG = False
+debug = False
 
 # Array of MySQL instances that should be savec
-MYSQL = [{
+mysql_servers = [{
     'host': '',
     'port': '',
     'user': '',
@@ -9,15 +9,15 @@ MYSQL = [{
 }]
 
 # List of directories to save
-DIRS_TO_BACKUP = [
+dirs_to_backup = [
     ''
 ]
 
 # Directory in which the .tar.gz backups will be saved
-OUTPUT_DIR = '/var/backup/'
+output_dir = '/var/backup/'
 
 # List of FTP repositories where backups should be copied
-FTP = [{
+ftp_servers = [{
     'host': '',
     'port': '',
     'user': '',
@@ -26,7 +26,7 @@ FTP = [{
 }]
 
 # Time to keep the backup, in days
-KEEPTIME = 7
+keeptime = 7
 
 # Prefix in archive's filename
-ARCHIVE_PREFIX = ''
+archive_prefix = ''
