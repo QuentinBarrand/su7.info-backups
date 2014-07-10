@@ -3,41 +3,39 @@ import time
 
 from ftplib import FTP
 
+## Uploads an archive to a FTP instance.
+#
+# @param instance the FTP instance to upload the archive to.
+# @param archive the archive to be uploaded.
+# @return the time taken to upload the archive.
+# @throws Error
+#
 def upload(instance, archive):
-    try:
-        print '\tUploading to ' + instance['host']
+    start = int(time.time())
 
-        start = int(time.time())
+    connection = FTP()
+    connection.connect(instance['host'], instance['port'])
+    connection.login(instance['user'], instance['password'])
+    connection.cwd(instance['directory'])
 
-        connection = FTP()
-        connection.connect(instance['host'], instance['port'])
-        connection.login(instance['user'], instance['password'])
-        connection.cwd(instance['directory'])
+    connection.storbinary('STOR ' + os.path.basename(archive), open(archive, 'rb'))
 
-        connection.storbinary('STOR ' + os.path.basename(archive), open(archive, 'rb'))
+    connection.quit()
 
-        connection.quit()
+    end = int(time.time())
 
-        end = int(time.time())
+    return (end - start)
 
-        minutes = (end - start) / 60
-        seconds = (end - start) - minutes * 60
-        print '\tUpload completed in ' + str(minutes) + ' min ' + str(seconds) + ' s.'
-
-    except Exception as e:
-        print 'Error during upload :\n' + e.message
-
-
+## Deletes an archive on the remote instance.
+#
+# @param instance the instance on which the archive should be deleted.
+# @param archive the archive to be deleted.
+#
 def delete_remote(instance, archive):
-    try:
-        print '\t\tFrom host ' + instance['host']
-        
-        connection = FTP()
-        connection.connect(instance['host'], instance['port'])
-        connection.login(instance['user'], instance['password'])
+    connection = FTP()
+    connection.connect(instance['host'], instance['port'])
+    connection.login(instance['user'], instance['password'])
 
-        connection.delete(instance['directory'] + '/' + archive)
+    connection.delete(instance['directory'] + '/' + archive)
 
-        connection.quit()
-    except Exception as e:
-        print 'Error during deletion :\n' + e.message
+    connection.quit()
