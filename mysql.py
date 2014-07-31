@@ -1,60 +1,45 @@
 import string
 import subprocess
 
+class Mysql:
 
-def get_db_list(instance):
-    if instance['port'] is '':
-        instance['port'] = 3306
-
-    query = string.join([
-        'mysql',
-        '--host=' + instance['host'],
-        '--port=' + str(instance['port']),
-        '--user=' + instance['user'],
-        '--password=' + instance['password'],
-        '-e "SHOW DATABASES;" | grep -Ev "(Database|information_schema)"'])
-
-    process = subprocess.Popen(query, shell=True, stdout=subprocess.PIPE)
-
-    db_list, stderr = process.communicate()
-    
-    db_list = string.split(str(db_list))
-
-    # These databases can cause issues during backup
-    db_list.remove('performance_schema')
-    db_list.remove('mysql')
-
-    return db_list
+    def __init__(self, settings):
+        self.host = settings['host'] if settings['host'] != '' else 'localhost'
+        self.port = settings['port'] if settings['port'] != '' else 3306
+        self.user = settings['user'] if settings['user'] != '' else 'root'
+        self.password = settings['password']
 
 
-def save_dbs(instance, instance_dir, all_dbs = True, db_list = []):
-    if instance['port'] is '':
-        instance['port'] = 3306
+    def get_db_list(self):
+        query = string.join([
+            'mysql',
+            '--host=%s' % self.host,
+            '--port=%s' % str(self.port),
+            '--user=%s' % self.user,
+            '--password=%s' % self.password,
+            '-e "SHOW DATABASES;" | grep -Ev "(Database|information_schema)"'])
 
-    if all_dbs:
+        process = subprocess.Popen(query, shell=True, stdout=subprocess.PIPE)
+
+        db_list, stderr = process.communicate()
+        
+        db_list = string.split(str(db_list))
+
+        return db_list
+
+
+    def save(self, dump_filename):
+
         query = string.join([
             'mysqldump',
             '--force',
             '--opt',
-            '--host=' + instance['host'],
-            '--port=' + str(instance['port']),
-            '--user=' + instance['user'],
-            '--password=' + instance['password'],
+            '--host=%s' % self.host,
+            '--port=%s' % str(self.port),
+            '--user=%s' % self.user,
+            '--password=%s' % self.password,
+            '--ignore-table=mysql.event',
             '--all-databases',
-            '--result-file=' + instance_dir + '.sql'])
-    else:
-        for db in db_list:
-            print '\t\t' + db
-
-            query = string.join([
-                'mysqldump',
-                '--force',
-                '--opt',
-                '--host=' + instance['host'],
-                '--port=' + str(instance['port']),
-                '--user=' + instance['user'],
-                '--password=' + instance['password'],
-                '--databases ' + db,
-                '--result-file=' + instance_dir + db + '.sql'])
-            
-    subprocess.call(query, shell=True)
+            '--result-file=%s' % dump_filename])
+                
+        subprocess.call(query, shell=True)

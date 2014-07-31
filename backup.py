@@ -28,20 +28,24 @@ def main():
 
     i = 0
 
-    for instance in config.mysql_servers:
-        instance_dir = os.path.join(temp_dir, 'db/mysql/instance', str(i))
-        os.makedirs(instance_dir)
+    for settings in config.mysql_servers:
+        instance = mysql.Mysql(settings)
 
-        db_list = []
+        instance_dir = os.path.join(temp_dir, 'db/mysql/instance', str(i))
+        dump_filepath = os.path.join(instance_dir, 'all_databases.sql')
+
+        os.makedirs(instance_dir)
 
         print '\tInstance %s' % str(i)
 
-        try:
-            db_list = mysql.get_db_list(instance)
-            mysql.save_dbs(instance, instance_dir, all_dbs = False, db_list = db_list)
-        except Exception as e:
-            print '\tCould not get databases list(%s).\n\tDumping all databases now.' % e.message
-            mysql.save_dbs(instance, instance_dir, all_dbs = True)
+        for db in instance.get_db_list():
+            print '\t\t%s' % db
+
+        instance.save(dump_filepath)
+
+        print '\n\tDump : %s (%s MB)' % (os.path.basename(dump_filepath), str(os.path.getsize(dump_filepath) / 1000000))
+
+        print str(os.path.getsize(dump_filepath))
 
         i += 1
 
