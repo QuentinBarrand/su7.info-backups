@@ -45,8 +45,6 @@ def main():
 
         print '\n\tDump : %s (%s MB)' % (os.path.basename(dump_filepath), str(os.path.getsize(dump_filepath) / 1000000))
 
-        print str(os.path.getsize(dump_filepath))
-
         i += 1
 
     # ... the rest
