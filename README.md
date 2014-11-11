@@ -6,15 +6,15 @@ It backups the following :
 * MySQL databases from multiple instances
 * ... basically any directory you need on your filesystem !
 
-All the data is `tar.gz`'d (so it keeps permissions, symbolic links and stuff) and uploaded to one or several FTP servers you can configure.
+All the data is `tar.gz`'d (so it keeps permissions, symbolic links and stuff) and uploaded to one or several FTP servers and / or one or several Swift containers you can configure.
 
 ## Configuration :
-Copy the `config.py.example` to `config.py` and fill it with your settings.  
+Copy the `config.example.py` to `config.py` and fill it with your settings.  
 This file has to remain located in the same directory than `backup.py`.
 
 ## Usage :
 `python2 backup.py`
 
 ## Contact
-The main repository for this is on [my Git server](http://git.quba.fr/su7_info/maintenance.git/). You can contact me by [email](mailto:quentin@quba.fr) if you have any question.  
+The main repository for this is on [my Git server](http://git.quba.fr/su7_info/backups.git/). You can contact me by [email](mailto:quentin@quba.fr) if you have any question.  
 Do not hesitate to contribute !
